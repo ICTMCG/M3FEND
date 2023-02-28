@@ -17,6 +17,7 @@ class TextCNNModel(torch.nn.Module):
             self.bert = BertModel.from_pretrained('hfl/chinese-bert-wwm-ext').requires_grad_(False)
         elif dataset == 'en':
             self.bert = RobertaModel.from_pretrained('roberta-base').requires_grad_(False)
+        self.embedding = self.bert.embeddings
 
         feature_kernel = {1: 64, 2: 64, 3: 64, 5: 64, 10: 64}
         self.convs = cnn_extractor(feature_kernel, emb_dim)
@@ -25,9 +26,8 @@ class TextCNNModel(torch.nn.Module):
     
     def forward(self, **kwargs):
         inputs = kwargs['content']
-        masks = kwargs['content_masks']
-        bert_feature = self.bert(inputs, attention_mask = masks).last_hidden_state
-        feature = self.convs(bert_feature)
+        feature = self.embedding(inputs)
+        feature = self.convs(feature)
         output = self.mlp(feature)
         return torch.sigmoid(output.squeeze(1))
 
